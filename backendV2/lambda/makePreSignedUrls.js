@@ -1,7 +1,7 @@
 import { UploadPartCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-async function makePreSignedUrls(s3, bucket_name, url_expiration, payload) {
+export async function makePreSignedUrls(s3, bucket_name, url_expiration, payload) {
     const { fileKey, fileId, parts } = JSON.parse(payload)
 
     const multipartParams = {
@@ -32,4 +32,3 @@ async function makePreSignedUrls(s3, bucket_name, url_expiration, payload) {
     })
 
 }
-module.exports.makePreSignedUrls = makePreSignedUrls

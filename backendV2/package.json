@@ -1,6 +1,7 @@
 {
   "name": "multipart_s3_upload",
   "version": "0.1.0",
+  "type": "module",
   "bin": {
     "multipart_s3_upload": "bin/multipart_s3_upload.js"
   },
@@ -8,7 +9,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "start": "node app.js"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",
@@ -24,7 +26,11 @@
     "@aws-sdk/client-s3": "^3.621.0",
     "@aws-sdk/s3-request-presigner": "3.309.0",
     "aws-cdk-lib": "2.80.0",
+    "body-parser": "^1.20.2",
     "constructs": "10.1.305",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "lodash": "4.17.21"
   }
 }

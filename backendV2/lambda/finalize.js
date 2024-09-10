@@ -4,7 +4,7 @@ const BUCKET_NAME = process.env['BUCKET_NAME'];
 
 const s3 = new S3Client();
 
-exports.handler = async (event) => {
+export async function handler(event) {
 	console.log(event);
 	if (event.body !== null && event.body !== undefined) {
 		const { fileKey, fileId, parts } = JSON.parse(event.body)

@@ -1,96 +1,100 @@
-# Uploading large objects to Amazon S3 using multipart upload feature and transfer acceleration
-[Amazon Photos](https://www.amazon.com/Amazon-Photos/b?ie=UTF8&node=13234696011) is a secure online storage for photos and videos. Users can upload their photos and videos to Amazon photos using a web browser. Uploading files to a web server is a common feature found in many web applications accessible through a web browser. A web application communicates with a web server using HyperText Transfer Protocol ("HTTP"). A single HTTP connection used to upload a file cannot use the full bandwidth available to the web application due to the underlying [TCP throughput limits](https://en.wikipedia.org/wiki/TCP_tuning#TCP_speed_limits). To overcome this limit, a large file is split into multiple parts and uploaded concurrently using multiple HTTP connections. A web application uploading a large file to [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) service can take advantage of the S3 multipart upload feature to improve throughput and upload speed. See this [link](https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html) for all the benefits with using S3 multipart upload feature. Amazon S3 Transfer Acceleration is a bucket-level feature that enables fast, easy, and secure transfers of files over long distances between your client and an S3 bucket. See this [link](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html) for details on S3 Transfer Acceleration.
+# Uploading large objects to S3-compatible cloud object storage using multipart upload and compression
+This sample project was adapted from [amazon-s3-multipart-upload-transfer-acceleration](https://github.com/aws-samples/amazon-s3-multipart-upload-transfer-acceleration) to show a way to implement multipart upload with compression directly from the browser using presigned URLs.
 
-This prototype project is intended to show a way to implement multipart upload and transfer acceleration directly from the browser using presigned URLs. 
+The project was developed and tested against the [Backblaze B2 Cloud Object Storage](https://www.backblaze.com/cloud-storage) [S3-compatible API](https://www.backblaze.com/docs/cloud-storage-s3-compatible-api), but it should work with any S3-compatible cloud object storage platform.  
+
+## Differences from the original project:
+
+* As an alternative to deploying the back end AWS Lambda functions, you can run a [simple Node.js app](backendV2/app.js). Note that the back end app does **not** implement any security. You will need to ensure that only authorized clients can call the endpoints.
+* The 'Use Transfer Acceleration' option is replaced by 'Compress Data'.
+* When compression is enabled:
+  * The [Uploader class](frontendV2/src/utils/upload.js) in the JavaScript front end uses [CompressionStream](https://developer.mozilla.org/en-US/docs/Web/API/CompressionStream) to `gzip` compress the selected file in the browser before splitting it into chunks and uploading it.
+  * The back end [initialize handler](backendV2/lambda/initialize.js) sets the `ContentEncoding` parameter in the `CreateMultipartUploadCommand` object to `gzip`.
+  * The front end [React app](frontendV2/src/App.js) displays the original file size, compressed size, as stored, and compression ratio when the upload is complete.
 
 ## Deploy the application
-### Prerequisite
-- Install and configure [AWS CLI](https://aws.amazon.com/cli/)
-- Install and bootstrap [AWS CDK](https://aws.amazon.com/cdk/)
-
 ### Backend
 - Clone this repository to your local computer. 
-- From the backendv2 folder, run "npm install" to install all dependencies. Use "npm audit" to check for known vulnerabilites on the dependent packages.
-- Use CDK to deploy the backend to AWS. For example,
-```
-cdk deploy --context env="randnumber" --context whitelistip="xx.xx.xxx.xxx"
-```
-An additional context variable called "urlExpiry" can be used to set specific expiration time on the S3 presigned URL. The default value is set at 300 seconds (5 min). A new S3 bucket with the name "document-upload-bucket-randnumber" is created for storing the uploaded files, and the whitelistip value is used to allow API Gateway access from this IP address only. 
+- From the `backendv2` folder:
+  - Run `npm install` to install all dependencies. Optionally, you can use `npm audit` to check for known vulnerabilities on the dependent packages.
+  - Copy `.env.template` to `.env` and edit the configuration:
 
-An additional context variable called "functionTimeout" can be used to set specific timeout for the AWS Lambda function responsible for generating presigned URLs. With a higher number of parts, timeouts may occur, but it can be extended as needed.
+    ```dotenv
+    PORT=3030
+    BUCKET_NAME=your-bucket-name
+    URL_EXPIRES=3600
+  
+    AWS_ACCESS_KEY_ID=your-backblaze-b2-application-key-id
+    AWS_SECRET_ACCESS_KEY=your-backblaze-b2-application-key
+    AWS_REGION=your-backblaze-b2-bucket-region
+    AWS_ENDPOINT_URL=https://your-backblaze-b2-bucket-endpoint
+    ```
+  
+    Note that `AWS_ENDPOINT_URL` must include the `https://` prefix.
 
-- Make note of the API Gateway endpoint URL.
+  - Run the backend app with `npm start`
 
 ### Frontend 
-- From the frontend folder, run "npm install" to install the packages.
-- Optionally, you can run "npm audit --production" to check on vulnerabilities.
-- Run "npm run start" to launch the frontend application from the browser. 
+- From the frontend folder, run `npm install` to install the packages.
+- Optionally, you can run `npm audit --production` to check on vulnerabilities.
+- Run `npm run start` to launch the frontend application from the browser. 
 - Use the user interface shown in the browser.
-- For Step 1, enter the API Gateway endpoint URL.
+- For Step 1, enter the back end app's URL, for example, `http://localhost:3030`
 - For Step 2 and Step 3, pick a baseline number. Use your available bandwidth, TCP window size, and retry time requirements to determine the optimal part size. This needs to be a minimum of 5 MB though. Web browsers have a limit on the number of concurrent connections to the same server. In Firefox, the default is 6 connections. Specifying a larger number of concurrent connections will result in blocking on the web browser side.
-- For Step 4, pick whether to use transfer acceleration feature or not.
+- For Step 4, pick whether to compress the data or not.
 - For Step 5, pick a large file to upload.
-- The final part of the user interface will show upload progress and the time to upload the file to S3. 
+- The final part of the user interface will show upload progress, the time to upload the file, and the compression ratio achieved, if compression was enabled. 
 
-## Improved throughput – You can upload parts in parallel to improve throughput
-In this section, a sample file "Docker Desktop Installer.exe" (485MB) will be used for testing improved throughput. The web application and the S3 bucket are in the US East region. The internet speed test on the web browser client showed the client can upload at 79 Megabits per second. The results of uploading the sample file as a single part, single part with transfer acceleration, multiple parts, and multiple parts with transfer acceleration is shown below for reference.
+You can compare the file size in B2 with the local file size to verify that the file is compressed. For example:
 
-### Test 1: Single part upload (72 seconds)
-![SNTA](./images/SNTA.PNG)
-### Test 2: Single part upload with transfer acceleration (43 seconds)
-![STA](./images/STA.PNG)
-### Test 3: Multiple parts upload (45 seconds)
-![MNTA](./images/MNTA.PNG)
-### Test 4: Multiple parts upload with transfer acceleration (28 seconds)
-![MTA](./images/MTA.PNG)
-
-
-## Quick recovery from any network issues – Smaller part size minimizes the impact of restarting a failed upload due to a network error
-### Test 5: Recover from a simulated network issue
-A network issue is simulated by activating Firefox "Work Offline" mode while a multiple parts upload with transfer acceleration is in progress. As show below, the client side web application will wait for a certain period of time before retrying the upload process. When the browser goes online by de-activating "Working Offline", the parts that failed to upload will be uploaded automatically. This feature minimized the impact of restarting a failed upload due a transient network issue. 
-![MTA](./images/MTAR.PNG)
-
-
-## Recommendation
-As seen from the results, uploading a large file using the S3 multipart upload feature and transfer acceleration can speed up the upload process time by 61% ((72-28/72)*100). This is made possible by improving throughput with multipart upload and reducing latency with transfer acceleration. By uploading smaller parts on the client side and utilizing exponential backoff retry strategy for failed uploads, a quicker automatic recovery from network issues is made possible.
-
-
-## Cleanup
-- Use "cdk destroy" to delete the stack of cloud resources created in this solution deployment.
-
-
-## Security 
-- SonarLint is used in VSCode to confirm there are no problems in the codebase.
-- npm audit is used to confirm there are no security vulnerabilities with the project dependencies. For the frontend package audit, use the command "npm audit --production".
-- S3 bucket created in this project is setup to enforce ssl requests only and encrypt data at rest.
-- S3 bucket is setup to block public access.
-- API Gateway is setup with a resource policy to allow requests from the specified IP address used during deployment. Presigned S3 URLs are setup to expire in 5 minutes by default.
-
-## Architecture
-```mermaid
-sequenceDiagram
-  autonumber
-  participant User
-  participant Browser (SPA)  
-  participant HTML Server  
-  participant API Gateway/Lambda
-  participant S3
-  User-->>Browser (SPA):Open Web App
-  Browser (SPA)-->>HTML Server:Get App
-  User-->>Browser (SPA):Upload File
-  Browser (SPA)-->>API Gateway/Lambda:Initialize Multipart Upload
-  API Gateway/Lambda-->>S3:Get Upload ID
-  Browser (SPA)-->>API Gateway/Lambda:Get Multipart PreSigned URLs (optional: transfer acceleration)
-  API Gateway/Lambda-->>S3:Get Presigned URLs  
-  par Parallel Upload
-    Browser (SPA)-->>Browser (SPA):Make part 1
-    Browser (SPA)-->>S3:Upload Part 1
-  end  
-  Browser (SPA)-->>API Gateway/Lambda:Finalize Multipart Upload
-  API Gateway/Lambda-->>S3:Mark upload complete
-
+```console
+% ls -l t8.shakespeare.txt 
+-rw-r--r--  1 ppatterson  staff  5458199 Sep 10 11:53 t8.shakespeare.txt
+% b2 ls --long b2://metadaddy-public/t8.shakespeare.txt
+4_zf1f51fb913357c4f74ed0c1b_f239c4ba1a111c054_d20240910_m192840_c004_v0402007_t0044_u01725996520526  upload  2024-09-10  19:28:40    2010413  t8.shakespeare.txt
 ```
 
-## Credit
-This project is inspired by a [blog post from LogRocket](https://blog.logrocket.com/multipart-uploads-s3-node-js-react/) but utilizes AWS serverless services to implement the backend. The frontend is rebuilt from scratch with enhancements for using transfer acceleration and usability. 
+You can use curl to see the HTTP headers, including `Content-Encoding`:
 
+```console
+% curl --head https://metadaddy-public.s3.us-west-004.backblazeb2.com/t8.shakespeare.txt
+HTTP/1.1 200 
+Server: nginx
+Date: Tue, 10 Sep 2024 20:15:08 GMT
+Content-Type: binary/octet-stream
+Content-Length: 2010413
+Connection: keep-alive
+Accept-Ranges: bytes
+Last-Modified: Tue, 10 Sep 2024 19:28:40 GMT
+ETag: "6cf90679afdb4860ea787c69f957b94e-1"
+Cache-Control: public
+Content-Encoding: gzip
+x-amz-request-id: d8f572f67720fede
+x-amz-id-2: aMYU1ZmaKOQozsDX3Y7FmoDRiZF1jhmJ5
+x-amz-version-id: 4_zf1f51fb913357c4f74ed0c1b_f239c4ba1a111c054_d20240910_m192840_c004_v0402007_t0044_u01725996520526
+Strict-Transport-Security: max-age=63072000
+```
+
+Note that, by default, curl will not honor the `Content-Encoding` HTTP response header when downloading the file:
+
+```console
+% curl -O https://metadaddy-public.s3.us-west-004.backblazeb2.com/t8.shakespeare.txt
+% ls -l t8.shakespeare.txt                             
+-rw-r--r--  1 ppatterson  staff  2010413 Sep 10 12:32 t8.shakespeare.txt
+% file t8.shakespeare.txt
+t8.shakespeare.txt: gzip compressed data, original size modulo 2^32 5458199
+```
+
+You must provide the `--compressed` option to have curl decompress the file:
+
+```console
+% curl --compressed -O https://metadaddy-public.s3.us-west-004.backblazeb2.com/t8.shakespeare.txt
+% ls -l t8.shakespeare.txt
+-rw-r--r--  1 ppatterson  staff  5458199 Sep 10 12:34 t8.shakespeare.txt
+% file t8.shakespeare.txt
+t8.shakespeare.txt: ASCII text
+```
+
+If you are using a library or SDK to download the file, check the documentation for how it handles the `Content-Encoding` HTTP response header. For example, the [Python requests library will automatically decode the response body](https://github.com/psf/requests/blob/main/docs/community/faq.rst#encoded-data) if `Content-Encoding` is set to `gzip`. The AWS SDK for Python, boto3, in contrast, [does not](https://github.com/boto/botocore/issues/1255); you must write code to decompress the file.
+
+See the [original project](https://github.com/aws-samples/amazon-s3-multipart-upload-transfer-acceleration) for discussion of [improving throughput by uploading parts in parallel](https://github.com/aws-samples/amazon-s3-multipart-upload-transfer-acceleration#improved-throughput--you-can-upload-parts-in-parallel-to-improve-throughput) and [tuning part size for quick recovery from network issues](https://github.com/aws-samples/amazon-s3-multipart-upload-transfer-acceleration#quick-recovery-from-any-network-issues--smaller-part-size-minimizes-the-impact-of-restarting-a-failed-upload-due-to-a-network-error).

@@ -4,7 +4,7 @@ const BUCKET_NAME = process.env['BUCKET_NAME'];
 
 const s3 = new S3Client();
 
-exports.handler = async (event) => {
+export async function handler(event) {
 	console.log(event);
 	if (!event.body) {
 		throw new Error("event.body is not defined");
@@ -17,6 +17,9 @@ exports.handler = async (event) => {
 	const multipartParams = {
 		Bucket: BUCKET_NAME,
 		Key: body.name,
+	}
+	if (body.compressData) {
+		multipartParams['ContentEncoding'] = 'gzip'
 	}
 	const command = new CreateMultipartUploadCommand(multipartParams);
 	const multipartUpload = await s3.send(command);
