@@ -1,8 +1,9 @@
 import { S3Client, CreateMultipartUploadCommand} from '@aws-sdk/client-s3';
+import {createS3ClientConfig} from './s3ClientConfig.js';
 
-const BUCKET_NAME = process.env['BUCKET_NAME'];
+const BUCKET_NAME = process.env['B2_BUCKET_NAME'];
 
-const s3 = new S3Client();
+const s3 = new S3Client(createS3ClientConfig());
 
 export async function handler(event) {
 	console.log(event);
