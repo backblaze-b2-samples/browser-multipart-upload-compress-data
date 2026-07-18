@@ -1,10 +1,12 @@
 import {S3Client} from '@aws-sdk/client-s3';
 import './makePreSignedUrls.js';
 import * as s3UrlLib from "./makePreSignedUrls.js";
-const BUCKET_NAME = process.env['BUCKET_NAME'];
+import {createS3ClientConfig} from './s3ClientConfig.js';
+
+const BUCKET_NAME = process.env['B2_BUCKET_NAME'];
 const URL_EXPIRES = process.env['URL_EXPIRES'];
 
-const s3 = new S3Client();
+const s3 = new S3Client(createS3ClientConfig());
 
 export async function handler(event) {
 	console.log(event);

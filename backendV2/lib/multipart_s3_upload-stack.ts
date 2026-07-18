@@ -88,7 +88,7 @@ export class MultipartS3UploadStack extends cdk.Stack {
       ...commonNodeJsProps,
       entry: join(__dirname, '../lambda/initialize.js'),
       environment: {
-        BUCKET_NAME: s3Bucket.bucketName
+        B2_BUCKET_NAME: s3Bucket.bucketName
       },
       functionName: `multipart-upload-initialize-${env}`
     });
@@ -96,7 +96,7 @@ export class MultipartS3UploadStack extends cdk.Stack {
       ...commonNodeJsProps,
       entry: join(__dirname, '../lambda/getPreSignedUrls.js'),
       environment: {
-        BUCKET_NAME: s3Bucket.bucketName,
+        B2_BUCKET_NAME: s3Bucket.bucketName,
         URL_EXPIRES: expires
       },
       functionName: `multipart-upload-getPreSignedUrls-${env}`,
@@ -106,7 +106,7 @@ export class MultipartS3UploadStack extends cdk.Stack {
       ...commonNodeJsProps,
       entry: join(__dirname, '../lambda/getPreSignedTAUrls.js'),
       environment: {
-        BUCKET_NAME: s3Bucket.bucketName,
+        B2_BUCKET_NAME: s3Bucket.bucketName,
         URL_EXPIRES: expires
       },
       functionName: `multipart-upload-getPreSignedTAUrls-${env}`,
@@ -116,7 +116,7 @@ export class MultipartS3UploadStack extends cdk.Stack {
       ...commonNodeJsProps,
       entry: join(__dirname, '../lambda/finalize.js'),
       environment: {
-        BUCKET_NAME: s3Bucket.bucketName
+        B2_BUCKET_NAME: s3Bucket.bucketName
       },
       functionName: `multipart-upload-finalize-${env}`
     });

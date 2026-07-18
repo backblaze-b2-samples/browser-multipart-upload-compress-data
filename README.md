@@ -17,20 +17,23 @@ The project was developed and tested against the [Backblaze B2 Cloud Object Stor
 - Clone this repository to your local computer. 
 - From the `backendv2` folder:
   - Run `npm install` to install all dependencies. Optionally, you can use `npm audit` to check for known vulnerabilities on the dependent packages.
-  - Copy `.env.template` to `.env` and edit the configuration:
+  - Copy `.env.example` to `.env` and edit the configuration:
 
     ```dotenv
     PORT=3030
-    BUCKET_NAME=your-bucket-name
     URL_EXPIRES=3600
-  
-    AWS_ACCESS_KEY_ID=your-backblaze-b2-application-key-id
-    AWS_SECRET_ACCESS_KEY=your-backblaze-b2-application-key
-    AWS_REGION=your-backblaze-b2-bucket-region
-    AWS_ENDPOINT_URL=https://your-backblaze-b2-bucket-endpoint
+
+    B2_APPLICATION_KEY_ID=your_key_id
+    B2_APPLICATION_KEY=your_application_key
+    B2_BUCKET_NAME=your-bucket-name
+    B2_REGION=your_region
+    B2_PUBLIC_URL_BASE=your_public_url_base
     ```
   
-    Note that `AWS_ENDPOINT_URL` must include the `https://` prefix.
+    The backend uses the S3-compatible API and derives the endpoint from
+    `B2_REGION` as `https://s3.<region>.backblazeb2.com`. `B2_PUBLIC_URL_BASE`
+    is included for consistency with other Backblaze B2 samples; this backend
+    does not read it because uploads use presigned S3 URLs.
 
   - Run the backend app with `npm start`
 
@@ -57,7 +60,7 @@ You can compare the file size in B2 with the local file size to verify that the 
 You can use curl to see the HTTP headers, including `Content-Encoding`:
 
 ```console
-% curl --head https://metadaddy-public.s3.us-west-004.backblazeb2.com/t8.shakespeare.txt
+% curl --head https://<bucket>.s3.<region>.backblazeb2.com/t8.shakespeare.txt
 HTTP/1.1 200 
 Server: nginx
 Date: Tue, 10 Sep 2024 20:15:08 GMT
@@ -78,7 +81,7 @@ Strict-Transport-Security: max-age=63072000
 Note that, by default, curl will not honor the `Content-Encoding` HTTP response header when downloading the file:
 
 ```console
-% curl -O https://metadaddy-public.s3.us-west-004.backblazeb2.com/t8.shakespeare.txt
+% curl -O https://<bucket>.s3.<region>.backblazeb2.com/t8.shakespeare.txt
 % ls -l t8.shakespeare.txt                             
 -rw-r--r--  1 ppatterson  staff  2010413 Sep 10 12:32 t8.shakespeare.txt
 % file t8.shakespeare.txt
@@ -88,7 +91,7 @@ t8.shakespeare.txt: gzip compressed data, original size modulo 2^32 5458199
 You must provide the `--compressed` option to have curl decompress the file:
 
 ```console
-% curl --compressed -O https://metadaddy-public.s3.us-west-004.backblazeb2.com/t8.shakespeare.txt
+% curl --compressed -O https://<bucket>.s3.<region>.backblazeb2.com/t8.shakespeare.txt
 % ls -l t8.shakespeare.txt
 -rw-r--r--  1 ppatterson  staff  5458199 Sep 10 12:34 t8.shakespeare.txt
 % file t8.shakespeare.txt
